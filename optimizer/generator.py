@@ -69,3 +69,4 @@ def apply_rewrites(parsed, schema_stats):
         applied.append("Removed unnecessary DISTINCT")
 
     return q, applied
+
