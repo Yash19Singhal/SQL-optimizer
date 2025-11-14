@@ -9,7 +9,8 @@ It analyzes SQL queries, detects inefficiencies, applies safe rewrites, and esti
 
 
 
-##  Project Structure
+##  Project Structur
+```
 sql-optimizer/
 │
 ├── app.py
@@ -27,7 +28,7 @@ sql-optimizer/
 │   ├── generator.py         
 │   ├── cost_estimator.py
 
-
+```
 
 
 
