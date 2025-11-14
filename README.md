@@ -13,7 +13,7 @@ It analyzes SQL queries, detects inefficiencies, applies safe rewrites, and esti
 sql-optimizer/
 │
 ├── app.py
-├── run.bat                  ← optional (Windows)                 
+├── run.bat                                 
 ├── Dockerfile
 ├── requirements.txt
 ├── README.md
@@ -26,7 +26,7 @@ sql-optimizer/
 │   ├── rules.py             
 │   ├── generator.py         
 │   ├── cost_estimator.py
-│
+
 
 
 
