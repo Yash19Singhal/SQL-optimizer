@@ -1,5 +1,5 @@
 ## SQL Optimizer Pro  
-**A Rule-Based SQL Query Optimizer with Automatic Rewrites and Cost Estimation
+A Rule-Based SQL Query Optimizer with Automatic Rewrites and Cost Estimation
 
 SQL Optimizer Pro is a complete rule-based SQL Query Optimization tool built using Python and Flask.  
 It analyzes SQL queries, detects inefficiencies, applies safe rewrites, and estimates execution cost — similar to how real database optimizers work.
