@@ -1,31 +1,60 @@
-def estimate_cost(parsed, schema_stats):
-    TABLE_SCAN_COST = 10
-    INDEX_SCAN_COST = 2
-    JOIN_COST = 500
-    ORDER_BY_COST = 8
-    GROUP_BY_COST = 12
 
+
+def estimate_cost(parsed, schema_stats):
+    raw = parsed["raw"].upper()
     tables = parsed.get("tables", [])
-    where = parsed.get("where") or ""
-    raw = parsed.get("raw", "")
-    rows_est = 0
+
     total_cost = 0
+    rows_est = 0
+
+    where = parsed.get("where") or ""
+    where_upper = where.upper()
 
     for t in tables:
-        meta = schema_stats.get(t, {"rows": 1000})
+        meta = schema_stats.get(t, None)
+        if not meta:
+            continue
+
         rows = meta["rows"]
         rows_est += rows
 
-        indexed = any(c.lower() in where.lower() for c in meta.get("columns", []))
-        total_cost += rows * (INDEX_SCAN_COST if indexed else TABLE_SCAN_COST)
+        indexed_cols = meta.get("indexes", [])
+        indexed_used = False
 
-    if len(tables) > 1:
-        total_cost += JOIN_COST
+        # IN() pattern → index-friendly
+        if " IN " in where_upper:
+            for col in indexed_cols:
+                if col.upper() in where_upper:
+                    indexed_used = True
 
-    if "ORDER BY" in raw.upper():
-        total_cost += ORDER_BY_COST
+        # OR chain → not index friendly
+        elif " OR " in where_upper:
+            indexed_used = False
 
-    if "GROUP BY" in raw.upper():
-        total_cost += GROUP_BY_COST
+        # Simple predicate → index OK
+        else:
+            for col in indexed_cols:
+                if col.upper() in where_upper:
+                    indexed_used = True
+
+        # Cost
+        scan_cost = 2 if indexed_used else 10
+        total_cost += rows * scan_cost
+
+    # JOIN cost
+    if "JOIN" in raw:
+        total_cost += 500
+
+    # Sorting cost
+    if "ORDER BY" in raw:
+        total_cost += 8000
+
+    # Grouping cost
+    if "GROUP BY" in raw:
+        total_cost += 12000
+
+    # DISTINCT cost
+    if "DISTINCT" in raw:
+        total_cost += 6000
 
     return {"cost": total_cost, "rows_est": rows_est}
