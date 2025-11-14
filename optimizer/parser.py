@@ -1,83 +1,90 @@
 import sqlparse
-from sqlparse.sql import IdentifierList, Identifier, Where
+
+def extract_where(statement):
+    where = ""
+    start = False
+
+    for token in statement.tokens:
+        t = str(token).strip()
+
+        if t.upper().startswith("WHERE"):
+            start = True
+            where = t[5:].strip()   # strip the word WHERE
+            continue
+
+        if start:
+            where += " " + t
+
+        # stop at semicolon or end of where clause
+        if t.endswith(";"):
+            break
+
+    return where.strip()
+
+from sqlparse.sql import IdentifierList, Identifier
 from sqlparse.tokens import Keyword, DML
-import re
 
-def _is_subselect(parsed):
-    if not parsed.is_group:
-        return False
-    for item in parsed.tokens:
-        if item.ttype is DML and item.value.upper() == 'SELECT':
-            return True
-    return False
-
-def extract_from_part(parsed):
-    from_seen = False
+def extract_tables(statement):
     tables = []
-    for token in parsed.tokens:
+    from_seen = False
+
+    for token in statement.tokens:
         if from_seen:
             if isinstance(token, IdentifierList):
                 for identifier in token.get_identifiers():
-                    tables.append(str(identifier.get_real_name()))
-                break
-            if isinstance(token, Identifier):
-                tables.append(str(token.get_real_name()))
-                break
-            if token.ttype is Keyword:
-                break
-        if token.ttype is Keyword and token.value.upper() == 'FROM':
+                    tables.append(identifier.get_name())
+                from_seen = False
+            elif isinstance(token, Identifier):
+                tables.append(token.get_name())
+                from_seen = False
+        if token.ttype is Keyword and token.value.upper() == "FROM":
             from_seen = True
+
     return tables
 
-def get_select_columns(parsed):
-    cols = []
-    select_seen = False
-    for token in parsed.tokens:
-        if select_seen:
-            if isinstance(token, IdentifierList):
-                for iden in token.get_identifiers():
-                    cols.append(str(iden).strip())
-                break
-            if isinstance(token, Identifier):
-                cols.append(str(token).strip())
-                break
-            if token.ttype is Keyword:
-                break
-        if token.ttype is DML and token.value.upper() == 'SELECT':
-            select_seen = True
-    return cols or ["*"]
 
-def has_distinct(parsed):
-    return 'DISTINCT' in str(parsed).upper()
+def extract_select(statement):
+    select_cols = []
+    seen_select = False
 
-def has_order_by(parsed):
-    return 'ORDER BY' in str(parsed).upper()
+    for token in statement.tokens:
+        if token.ttype is None and token.value.upper().startswith("SELECT"):
+            seen_select = True
 
-def detect_subquery(parsed):
-    return bool(re.search(r"\(\s*SELECT\s", str(parsed), re.IGNORECASE))
+        if seen_select and token.ttype is None and "FROM" in token.value.upper():
+            break
 
-def parse_query(query):
-    parsed = sqlparse.parse(query)[0]
-    select_cols = get_select_columns(parsed)
-    tables = extract_from_part(parsed)
+        if seen_select and token.ttype is None:
+            cols = str(token).replace("SELECT", "").strip()
+            if cols:
+                select_cols = [c.strip() for c in cols.split(",")]
+    return select_cols
 
-    where = None
-    for token in parsed.tokens:
-        if isinstance(token, Where):
-            where = str(token)
-
+def extract_joins(statement):
     joins = []
-    raw = str(parsed).upper()
-    if "JOIN" in raw:
-        joins.append("JOIN")
+    s = str(statement).upper()
+    if "JOIN" in s:
+        parts = s.split("JOIN")[1:]
+        for p in parts:
+            joins.append("JOIN " + p.strip())
+    return joins
+
+def parse_sql(query):
+    parsed = sqlparse.parse(query)
+    if not parsed:
+        return {}
+
+    statement = parsed[0]
+
+    select_cols = extract_select(statement)
+    tables = extract_tables(statement)
+    where_clause = extract_where(statement)
+    joins = extract_joins(statement)
 
     return {
         "raw": query,
         "select": select_cols,
         "tables": tables,
-        "where": where,
-        "joins": joins,
-        "distinct": has_distinct(parsed),
-        "order_by": has_order_by(parsed),
-        "has_subquery": detect_subquery(parsed)
+        "where": where_clause,
+        "joins": joins
     }
