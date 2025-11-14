@@ -9,7 +9,7 @@ It analyzes SQL queries, detects inefficiencies, applies safe rewrites, and esti
 
 
 
-##  Project Structur
+##  Project Structure
 ```
 sql-optimizer/
 │
