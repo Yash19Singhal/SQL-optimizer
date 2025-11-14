@@ -110,14 +110,14 @@ def check_exists_to_join(parsed):
 
 def check_in_subquery(parsed):
     if re.search(r"\bIN\s*\(\s*SELECT", parsed.get("raw",""), re.IGNORECASE):
-        return ["IN (SELECT ...) detected; consider JOIN."]
+        return ["IN(SELECT...) detected; consider JOIN."]
     return []
 
 def check_group_by_having(parsed):
     s = []
     q = parsed.get("raw","")
     if "HAVING" in q.upper() and "WHERE" not in q.upper():
-        s.append("HAVING without WHERE; inefficient.")
+        s.append("HAVING without WHERE is inefficient.")
     if "GROUP BY" in q.upper():
         m = re.search(r"GROUP\s+BY\s+(.*?)(ORDER|LIMIT|$)", q, re.IGNORECASE|re.DOTALL)
         if m:
